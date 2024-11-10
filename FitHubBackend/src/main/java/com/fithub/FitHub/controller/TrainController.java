@@ -1,13 +1,15 @@
 package com.fithub.FitHub.controller;
 
+import com.fithub.FitHub.dto.ExercisesDTO;
 import com.fithub.FitHub.dto.TrainDTO;
 import com.fithub.FitHub.entity.Train;
+import com.fithub.FitHub.service.ExercisesService;
 import com.fithub.FitHub.service.TrainService;
 import com.fithub.FitHub.util.ErrorResponse;
 import com.fithub.FitHub.util.TrainNotCreatedException;
 import com.fithub.FitHub.util.TrainNotFoundException;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
@@ -20,51 +22,60 @@ import java.util.List;
 @RequestMapping("/trains")
 public class TrainController {
     private final TrainService trainService;
-    private final ModelMapper modelMapper;
+    private final ExercisesService exercisesService;
+
     @Autowired
-    public TrainController(TrainService trainService, ModelMapper modelMapper) {
+    public TrainController(TrainService trainService, ExercisesService exercisesService) {
         this.trainService = trainService;
-        this.modelMapper = modelMapper;
+        this.exercisesService = exercisesService;
     }
 
     @GetMapping
-    public List<TrainDTO> getAllTrains() {
-        return trainService.findAll().stream().map(this::converteToTrainDTO).toList();
+    public Page<TrainDTO> getAllTrains(@RequestParam(value = "page", required = false) Integer page,
+                                       @RequestParam(value = "sort", required = false) String typeOfFilter) {
+        return trainService.findAll(page, typeOfFilter);
     }
 
     @GetMapping("/{id}")
     public TrainDTO getTrainById(@PathVariable Long id) {
-        return converteToTrainDTO(trainService.findById(id));
+        return trainService.converteToTrainDTO(trainService.findById(id));
     }
 
     @PostMapping
     public ResponseEntity<HttpStatus> createTrain(@RequestBody TrainDTO trainDTO, BindingResult bindingResult) {
         checkErrors(bindingResult);
-        trainService.save(createFromDTO(trainDTO));
+        trainService.save(trainService.createFromDTO(trainDTO));
         return ResponseEntity.ok(HttpStatus.CREATED);
+    }
+
+    @PatchMapping("/{id}/addExercises")
+    public ResponseEntity<HttpStatus> addExerciseTrain(@PathVariable("id") Long id, @RequestBody ExercisesDTO exercisesDTO, BindingResult bindingResult) {
+        checkErrors(bindingResult);
+        var exercise = exercisesService.needToSave(exercisesService.converteFromDTO(exercisesDTO));
+        trainService.addExercises(id, exercise);
+        return ResponseEntity.ok(HttpStatus.OK);
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<HttpStatus> updateTrain(@PathVariable("id") Long id, @RequestBody TrainDTO trainDTO, BindingResult bindingResult) {
         checkErrors(bindingResult);
-        trainService.update(id, createFromDTO(trainDTO));
+        trainService.update(id, trainService.createFromDTO(trainDTO));
         return ResponseEntity.ok(HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<HttpStatus> deleteTrain(@PathVariable("id") Long id) {
-//        checkErrors(bindingResult);
+        //        checkErrors(bindingResult);
         trainService.delete(id);
         return ResponseEntity.ok(HttpStatus.OK);
     }
 
-    private Train createFromDTO(TrainDTO trainDTO) {
-        return modelMapper.map(trainDTO, Train.class);
+    @GetMapping("/search/{startWith}")
+    public List<Train> searchPage(@PathVariable("startWith") String startWith) {
+        return trainService.findTrainByTitleStartingWith(startWith);
     }
 
-    private TrainDTO converteToTrainDTO(Train train) {
-        return modelMapper.map(train, TrainDTO.class);
-    }
+
 
     private static void checkErrors(BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
@@ -75,7 +86,6 @@ public class TrainController {
             throw new TrainNotCreatedException(errors.toString());
         }
     }
-
     @ExceptionHandler
     private ResponseEntity<ErrorResponse> handleException(TrainNotFoundException e) {
         ErrorResponse errorResponse = new ErrorResponse("Train with this id not found", System.currentTimeMillis());

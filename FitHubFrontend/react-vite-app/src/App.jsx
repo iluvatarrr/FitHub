@@ -1,19 +1,20 @@
 import { useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
 import { getContacts } from './api/TrainService';
+import {Routes, Route, Navigate} from 'react-router-dom'
 import './App.css';
-import Home from './Home';
-import Training from './Training';
-import Trainings from './Trainings';
+import Trainings from './components/trainings/Trainings';
 
 
 function App() {
+  console.log(1213)
   const [data, setData] = useState({});
-  const getAllContacts = async () => {
+  const [currentPage, setCurrentPage] = useState(0);
+  
+  const getAllContacts = async (page = 0) => {
     try {
-      const { data } = await getContacts();
+      setCurrentPage(page);
+      const { data } = await getContacts(page);
       setData(data);
-      console.log(data);
     } catch {
       console.log("error");
     }
@@ -22,19 +23,16 @@ function App() {
   useEffect(() => {
     getAllContacts();
   }, []);
+  
   return (
-    <>
-    <Trainings />
-    {/* <main>
+    <main>
       <div>
       <Routes>
-      <Route path="/" element={<Navigate to={'/trains'}/>}/>
-      <Route path="/trains" element={<Trainings data={data}/>}/>
+        <Route path="/" element={<Navigate to={'/trains'}/>}/>
+        <Route path="/trains" element={<Trainings data={data} currentPage={currentPage} getAllContacts={getAllContacts}/>}/>
       </Routes>
       </div>
-    </main> */
-    }
-    </>
+    </main>
   )
 }
 

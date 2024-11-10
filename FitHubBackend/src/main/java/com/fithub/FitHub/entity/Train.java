@@ -4,12 +4,9 @@ package com.fithub.FitHub.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.Cascade;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Builder
 @AllArgsConstructor
@@ -24,17 +21,21 @@ public class Train {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column
+    @Column(unique = true)
     private String title;
+    @Column
+    private String description;
     @Column
     @Enumerated(EnumType.STRING)
     private Status status;
     @Column
-    private Integer score;
+    private Double score;
     @Column
     private Integer used;
     @Column(name="duration_in_mitutes")
     private Integer durationInMinutes;
+    @Column
+    private Integer countOfIteration;
     @Column
     private String author;
     @Column
@@ -42,4 +43,18 @@ public class Train {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private ActivityCategories category;
+
+    @Builder.Default
+    @JsonIgnore
+    @ManyToMany(mappedBy = "trains")
+    private List<Users> users = new ArrayList<>();
+
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(
+            name = "trains_exercises",
+            joinColumns = @JoinColumn(name = "train_id"),
+            inverseJoinColumns = @JoinColumn(name = "exercises_id")
+    )
+    private List<Exercises> exercises = new ArrayList<>();
 }
