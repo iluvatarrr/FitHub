@@ -32,6 +32,12 @@ public class ExercisesService {
         return exercisesRepository.findById(id).orElseThrow(ExerciseNotFoundException::new);
     }
 
+    public List<Exercises> findAllByCategoryAndPlace(String category, String place) {
+        var activityCategory = activityCategoriesService.findByCategory(category);
+        return exercisesRepository.findAllByCategoryAndPlace(activityCategory, place);
+    }
+
+
     @Transactional
     public Exercises save(Exercises exercises) {
         var activityCategory = activityCategoriesService.needToSave(exercises.getCategory());
@@ -64,5 +70,16 @@ public class ExercisesService {
         }
         exercise.setId(exercisesRepository.findByTitle(exercise.getTitle()).getId());
         return exercise;
+    }
+
+    public List<Exercises> findAllByCategory(String category) {
+        var activityCategory = activityCategoriesService.findByCategory(category);
+        return exercisesRepository.findAllByCategory(activityCategory);
+    }
+    @Transactional
+    public void saveAll(List<ExercisesDTO> exercises) {
+        for (var exercisesDTO : exercises) {
+            save(converteFromDTO(exercisesDTO));
+        }
     }
 }

@@ -2,12 +2,16 @@ package com.fithub.FitHub.config;
 
 //import com.fithub.FitHub.security.AuthProviderImpl;
 
+import com.fithub.FitHub.props.MinioProperties;
 import com.fithub.FitHub.service.UsersDetailsService;
+import io.minio.MinioClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,50 +22,89 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-//@EnableAsync
+@EnableAsync
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true)
-public class SecurityConfig {
+public class SecurityConfig implements WebMvcConfigurer {
 
     private final JWTFilter jwtFilter;
+    private final MinioProperties minioProperties;
     private final UsersDetailsService userDetailsService;
 
+
     @Autowired
-    public SecurityConfig(JWTFilter jwtFilter, UsersDetailsService userDetailsService) {
+    public SecurityConfig(JWTFilter jwtFilter, MinioProperties minioProperties, UsersDetailsService userDetailsService) {
         this.jwtFilter = jwtFilter;
+        this.minioProperties = minioProperties;
         this.userDetailsService = userDetailsService;
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults()) // Включение CORSf
+                .httpBasic(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/admin").hasRole("ADMIN")
-                        .requestMatchers("/hello", "/users/lk").authenticated()
-                        .requestMatchers("/auth/login", "/trains","/trains/**","/users", "/users/**", "/auth/registration", "/showUserInfo").permitAll()
-                ).formLogin(form -> form
+                        .requestMatchers("/hello", "/users/lk", "/assistant/generate").authenticated()
+                        .requestMatchers("/auth/login", "/trains", "/trains/**", "/assistant", "/assistant/**", "/users", "/users/**", "/auth/registration", "/showUserInfo", "/ratings", "/ratings/**", "/exercises", "/exercises/**").permitAll()
+                )
+                .formLogin(form -> form
                         .loginPage("/auth/login")
                         .loginProcessingUrl("/process_login")
-                        .defaultSuccessUrl("/trains",true)
+                        .defaultSuccessUrl("/trains", true)
                         .failureUrl("/auth/login?error").permitAll())
-                .logout((logout) -> logout.logoutUrl("/logout").logoutSuccessUrl("/auth/login"))
-                .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/auth/login"))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
     }
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins(
+                        "http://localhost:5173",
+                        "http://localhost:9000",
+                        "http://localhost:9090",
+                        "http://127.0.0.1:9000",
+                        "http://127.0.0.1:9090",
+                        "http://172.18.0.2:9000",
+                        "http://172.18.0.2:9090",
+                        "http://212.41.6.237"
+                )
+                .allowedHeaders("*")
+                .exposedHeaders("*")
+                .allowedMethods("*");
+    }
+
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService);
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public PasswordEncoder getPasswordEncoder() {
-        return new BCryptPasswordEncoder();
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Bean
+    public MinioClient minioClient() {
+        return MinioClient.builder()
+                .endpoint(minioProperties.getUrl())
+                .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                .build();
     }
 }

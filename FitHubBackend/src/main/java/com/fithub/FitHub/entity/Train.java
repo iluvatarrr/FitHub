@@ -2,11 +2,14 @@ package com.fithub.FitHub.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Builder
 @AllArgsConstructor
@@ -29,11 +32,11 @@ public class Train {
     @Enumerated(EnumType.STRING)
     private Status status;
     @Column
-    private Double score;
-    @Column
     private Integer used;
-    @Column(name="duration_in_mitutes")
+    @Column(name="duration_in_minutes")
     private Integer durationInMinutes;
+    @Column(name="duration_in_minutes_text")
+    private String durationInMinutesText;
     @Column
     private Integer countOfIteration;
     @Column
@@ -57,4 +60,13 @@ public class Train {
             inverseJoinColumns = @JoinColumn(name = "exercises_id")
     )
     private List<Exercises> exercises = new ArrayList<>();
+
+    @JsonIgnore
+    @Builder.Default
+    @OneToMany(mappedBy = "train")
+    private Set<Rating> ratings = new HashSet<>();
+
+    @Column
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String image;
 }

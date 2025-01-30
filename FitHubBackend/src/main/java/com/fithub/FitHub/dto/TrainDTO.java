@@ -17,12 +17,13 @@ public class TrainDTO {
     private String title;
     private String description;
     private Status status;
-    private Double score;
     private Integer used;
     private Integer durationInMinutes;
+    private String durationInMinutesText;
     private Integer countOfIteration;
     private String author;
     private String place;
+    private String image;
     private ActivityCategories category;
     private List<Users> users;
     private List<Exercises> exercises;

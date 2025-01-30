@@ -2,12 +2,12 @@ package com.fithub.FitHub.entity;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Cascade;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @Builder
@@ -20,6 +20,7 @@ import java.util.List;
 public class Users {
 
     @Id
+    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -36,6 +37,9 @@ public class Users {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private Date birthday;
 
+    @Transient
+    private Integer age;
+
     @Column(unique = true)
     private String email;
 
@@ -43,26 +47,24 @@ public class Users {
     private String password;
 
     @Column
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private String image;
+
+    @Column
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    @Column
-    private String skill;
-
-    @Column(name = "count_of_trains")
-    private Integer countOfTrains;
-    @Column
-    private Integer weight;
-
-    @Column
-    private Integer height;
+    @OneToOne(mappedBy = "user")
+    @Cascade(org.hibernate.annotations.CascadeType.ALL)
+    @JsonIgnore
+    private UserStatistics userStatistics;
 
     @Column
     @Enumerated(EnumType.STRING)
     private Role role;
 
     @Builder.Default
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JsonIgnore
     @JoinTable(
             name = "users_trains",
@@ -70,4 +72,10 @@ public class Users {
             inverseJoinColumns = @JoinColumn(name = "trains_id")
     )
     private List<Train> trains = new ArrayList<>();
+
+    @JsonIgnore
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private Set<Rating> ratings = new HashSet<>();
+
 }

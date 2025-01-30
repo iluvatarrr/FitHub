@@ -22,14 +22,23 @@ public class ExercisesController {
     public ExercisesController(ExercisesService exercisesService) {
         this.exercisesService = exercisesService;
     }
+
     @GetMapping
     public List<ExercisesDTO> getAllExercises() {
         return exercisesService.findAll();
     }
+
     @GetMapping("/{id}")
     public ExercisesDTO getExerciseById(@PathVariable("id") Long id) {
         return exercisesService.converteToExerciseDTO(exercisesService.findById(id));
     }
+
+    @PostMapping("/addAll")
+    public ResponseEntity<HttpStatus> addAllExercises(@RequestBody List<ExercisesDTO> exercises) {
+        exercisesService.saveAll(exercises);
+        return ResponseEntity.ok(HttpStatus.CREATED);
+    }
+
     @PostMapping
     public ResponseEntity<HttpStatus> createExercise(@RequestBody ExercisesDTO exercisesDTO, BindingResult bindingResult) {
         checkErrors(bindingResult);
@@ -38,14 +47,14 @@ public class ExercisesController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<HttpStatus> updateTrain(@PathVariable("id") Long id, @RequestBody ExercisesDTO exercisesDTO, BindingResult bindingResult) {
+    public ResponseEntity<HttpStatus> updateExercise(@PathVariable("id") Long id, @RequestBody ExercisesDTO exercisesDTO, BindingResult bindingResult) {
         checkErrors(bindingResult);
         exercisesService.update(id, exercisesService.converteFromDTO(exercisesDTO));
         return ResponseEntity.ok(HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<HttpStatus> deleteTrain(@PathVariable("id") Long id) {
+    public ResponseEntity<HttpStatus> deleteExercise(@PathVariable("id") Long id) {
         //        checkErrors(bindingResult);
         exercisesService.delete(id);
         return ResponseEntity.ok(HttpStatus.OK);
